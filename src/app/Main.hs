@@ -1,11 +1,10 @@
-{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
-import Data.Aeson (FromJSON, Value (Object), decode, parseJSON, (.:))
-import qualified Data.Aeson.Key as Key
-import Data.Aeson.Types (Parser)
+import Data.Aeson (FromJSON, decode)
+import GHC.Generics (Generic)
 import Network.HTTP.Simple (getResponseBody, httpLBS, httpLbs, parseRequest_, setRequestHeader)
 
 -- import qualified Data.ByteString.Lazy as LBS
@@ -38,21 +37,10 @@ main = do
 (-:) :: t1 -> (t1 -> t2) -> t2
 x -: f = f x
 
-newtype IPRes = IPRes {origin :: String} deriving (Show)
+newtype IPRes = IPRes {origin :: String} deriving (Show, Generic)
 
-instance FromJSON IPRes where
-  parseJSON :: Value -> Parser IPRes
-  parseJSON (Object v) = IPRes <$> v .: Key.fromString "origin"
-  parseJSON _ = mempty
+instance FromJSON IPRes
 
-data IPInfo = IPInfo {ip :: String, city :: Maybe String, region :: Maybe String, country :: Maybe String} deriving (Show)
+data IPInfo = IPInfo {ip :: String, city :: Maybe String, region :: Maybe String, country :: Maybe String} deriving (Show, Generic)
 
-instance FromJSON IPInfo where
-  parseJSON :: Value -> Parser IPInfo
-  parseJSON (Object v) =
-    IPInfo
-      <$> v .: Key.fromString "ip"
-      <*> v .: Key.fromString "city"
-      <*> v .: Key.fromString "region"
-      <*> v .: Key.fromString "country"
-  parseJSON _ = mempty
+instance FromJSON IPInfo
