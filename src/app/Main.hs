@@ -17,14 +17,13 @@ main = do
   --   Nothing -> putStrLn "parsing failed"
   --   Just value -> print value
 
-  res <- httpJSONEither "https://httpbin.org/ip"
-  let ipEither = getResponseBody res
+  ipEither <- fetchAPI "https://httpbin.org/ip"
   ip_a <- either throwIO pure ipEither
   putStrLn $ "your ip:" ++ origin ip_a
 
-  infoEither <- fetchIPInfo $ origin ip_a
+  infoEither <- fetchAPI $ "https://ipapi.co/" ++ origin ip_a ++ "/json/"
   info <- either throwIO pure infoEither
-  putStrLn $ "info:" ++ show info
+  putStrLn $ "info:" ++ show (info :: IPInfo)
 
 (-:) :: t1 -> (t1 -> t2) -> t2
 x -: f = f x
@@ -37,10 +36,10 @@ data IPInfo = IPInfo {ip :: String, city :: Maybe String, region :: Maybe String
 
 instance FromJSON IPInfo
 
-fetchIPInfo :: String -> IO (Either JSONException IPInfo)
-fetchIPInfo ip_a = do
+fetchAPI :: (FromJSON a) => String -> IO (Either JSONException a)
+fetchAPI url = do
   let infoReq =
-        parseRequest_ ("https://ipapi.co/" ++ ip_a ++ "/json/")
+        parseRequest_ url
           -: setRequestHeader "User-Agent" ["My Haskell App/1.0"]
 
   infoRes <- httpJSONEither infoReq
