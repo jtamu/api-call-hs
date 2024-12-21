@@ -3,10 +3,9 @@
 
 module Main where
 
-import Control.Exception (throwIO)
 import Data.Aeson (FromJSON)
 import GHC.Generics (Generic)
-import Network.HTTP.Simple (JSONException, getResponseBody, httpJSONEither, parseRequest_, setRequestHeader)
+import Network.HTTP.Simple (getResponseBody, httpJSON, parseRequest_, setRequestHeader)
 
 -- import qualified Data.ByteString.Lazy as LBS
 
@@ -17,12 +16,10 @@ main = do
   --   Nothing -> putStrLn "parsing failed"
   --   Just value -> print value
 
-  ipEither <- fetchAPI "https://httpbin.org/ip"
-  ip_a <- either throwIO pure ipEither
+  ip_a <- fetchAPI "https://httpbin.org/ip"
   putStrLn $ "your ip:" ++ origin ip_a
 
-  infoEither <- fetchAPI $ "https://ipapi.co/" ++ origin ip_a ++ "/json/"
-  info <- either throwIO pure infoEither
+  info <- fetchAPI $ "https://ipapi.co/" ++ origin ip_a ++ "/json/"
   putStrLn $ "info:" ++ show (info :: IPInfo)
 
 (-:) :: t1 -> (t1 -> t2) -> t2
@@ -36,12 +33,10 @@ data IPInfo = IPInfo {ip :: String, city :: Maybe String, region :: Maybe String
 
 instance FromJSON IPInfo
 
-fetchAPI :: (FromJSON a) => String -> IO (Either JSONException a)
-fetchAPI url = do
-  let infoReq =
-        parseRequest_ url
-          -: setRequestHeader "User-Agent" ["My Haskell App/1.0"]
-
-  infoRes <- httpJSONEither infoReq
-
-  return (getResponseBody infoRes)
+fetchAPI :: (FromJSON a) => String -> IO a
+fetchAPI url =
+  getResponseBody <$> httpJSON infoReq
+  where
+    infoReq =
+      parseRequest_ url
+        -: setRequestHeader "User-Agent" ["My Haskell App/1.0"]
