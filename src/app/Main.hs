@@ -3,9 +3,10 @@
 
 module Main where
 
+import Control.Exception (throwIO)
 import Data.Aeson (FromJSON)
 import GHC.Generics (Generic)
-import Network.HTTP.Simple (getResponseBody, httpJSONEither, parseRequest_, setRequestHeader)
+import Network.HTTP.Simple (JSONException, getResponseBody, httpJSONEither, parseRequest_, setRequestHeader)
 
 -- import qualified Data.ByteString.Lazy as LBS
 
@@ -18,21 +19,12 @@ main = do
 
   res <- httpJSONEither "https://httpbin.org/ip"
   let ipEither = getResponseBody res
-  case ipEither of
-    Left msg -> print msg
-    Right ip_a -> do
-      putStrLn $ "your ip:" ++ origin ip_a
+  ip_a <- either throwIO pure ipEither
+  putStrLn $ "your ip:" ++ origin ip_a
 
-      let infoReq =
-            parseRequest_ ("https://ipapi.co/" ++ origin ip_a ++ "/json/")
-              -: setRequestHeader "User-Agent" ["My Haskell App/1.0"]
-
-      infoRes <- httpJSONEither infoReq
-
-      let infoEither = getResponseBody infoRes
-      case infoEither of
-        Left msg -> print msg
-        Right info -> print (info :: IPInfo)
+  infoEither <- fetchIPInfo $ origin ip_a
+  info <- either throwIO pure infoEither
+  putStrLn $ "info:" ++ show info
 
 (-:) :: t1 -> (t1 -> t2) -> t2
 x -: f = f x
@@ -44,3 +36,13 @@ instance FromJSON IPRes
 data IPInfo = IPInfo {ip :: String, city :: Maybe String, region :: Maybe String, country :: Maybe String} deriving (Show, Generic)
 
 instance FromJSON IPInfo
+
+fetchIPInfo :: String -> IO (Either JSONException IPInfo)
+fetchIPInfo ip_a = do
+  let infoReq =
+        parseRequest_ ("https://ipapi.co/" ++ ip_a ++ "/json/")
+          -: setRequestHeader "User-Agent" ["My Haskell App/1.0"]
+
+  infoRes <- httpJSONEither infoReq
+
+  return (getResponseBody infoRes)
